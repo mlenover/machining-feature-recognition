@@ -1,0 +1,3 @@
+[console_scripts]
+makepy = makepy.cli:main
+
