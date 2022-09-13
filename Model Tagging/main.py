@@ -1,6 +1,7 @@
 import win32com.client as win32
 import gui
 import swsetup
+import swinterface
 
 try:
     import swconst
@@ -17,4 +18,5 @@ featureList = ["Simple Hole", "Closed Pocket", "Countersunk Hole", "Opened Pocke
 
 
 app = swsetup.open_file()
-my_gui = gui.GUI(featureList, swsetup.get_selection, app)
+swi = swinterface.FeatureTag(app, featureList)
+my_gui = gui.GUI(featureList, lambda: swsetup.get_selection(app), swi)
