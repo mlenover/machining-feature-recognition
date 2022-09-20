@@ -1,9 +1,15 @@
-from tkinter import Tk, Label, Button, Frame, StringVar
+from tkinter import Tk, Label, Button, Frame, StringVar, filedialog
 import distinctipy
+import swsetup
+
+def open_directory():
+    open_dir = filedialog.askdirectory()
+    print(open_dir)
+    return open_dir
 
 
 class GUI:
-    def __init__(self, feature_list, get_label_fun, swi):
+    def __init__(self, feature_list, get_label_fun, swi, files):
         root = Tk()
 
         self.master = root
@@ -37,7 +43,10 @@ class GUI:
                 btn = Button(frame, text=feature, bg=hexval, command=lambda f=feature: swi.set_feature(f))
                 btn.grid(row=i, column=j, sticky="news")
 
-        btn = Button(frame, text="Non-feature", command=lambda: swi.set_feature("No Feature"))
+        btn = Button(frame, text="Non-feature", bg='#CAD1EE', command=lambda: swi.set_feature("No Feature"))
+        btn.grid(row=rows, column=0, columnspan=2, sticky="news")
+
+        btn = Button(frame, text="Next file", command=lambda: files.next_file())
         btn.grid(row=rows, column=0, columnspan=2, sticky="news")
 
         btn = Button(frame, text="Close", command=lambda: self.exit(root))
@@ -49,7 +58,7 @@ class GUI:
         frame.columnconfigure(tuple(range(columns)), weight=1)
         frame.rowconfigure(tuple(range(rows+2)), weight=1)
 
-        self.master.after(1000, self.do_something, get_label_fun, swi)
+        self.master.after(10, self.do_something, get_label_fun, swi)
 
         root.mainloop()
 
@@ -65,5 +74,6 @@ class GUI:
         self.update_label(selection)
         self.master.after(10, self.do_something, get_label_fun, swi)
 
-    def exit(self, root):
+    @staticmethod
+    def exit(root):
         root.quit()

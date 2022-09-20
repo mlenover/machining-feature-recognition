@@ -35,3 +35,4 @@ class FeatureTag:
                                                   v_face_prop[5], v_face_prop[6],
                                                   v_face_prop[7], v_face_prop[8], False,
                                                   self.currFeature)
+        success = self.app.ActiveDoc.SelectionManager.GetSelectedObject6(1, -1).DeSelect
