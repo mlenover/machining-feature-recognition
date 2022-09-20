@@ -1,6 +1,7 @@
 from tkinter import Tk, Label, Button, Frame, StringVar, filedialog
 import distinctipy
-import swsetup
+import pickle
+
 
 def open_directory():
     open_dir = filedialog.askdirectory()
@@ -31,7 +32,13 @@ class GUI:
 
         columns = 2
         rows = int(len(feature_list) / 2)
-        rgbvals = distinctipy.get_colors(rows * columns)
+
+        try:
+            rgbvals = pickle.load(open("rgbvals.pickle", "rb"))
+        except (OSError, IOError) as e:
+            rgbvals = distinctipy.get_colors(rows * columns)
+            pickle.dump(rgbvals, open("rgbvals.pickle", "wb"))
+
         swi.set_colors(rgbvals)
 
         for i in range(rows):
@@ -47,13 +54,13 @@ class GUI:
         btn.grid(row=rows, column=0, columnspan=2, sticky="news")
 
         btn = Button(frame, text="Next file", command=lambda: files.next_file())
-        btn.grid(row=rows, column=0, columnspan=2, sticky="news")
-
-        btn = Button(frame, text="Close", command=lambda: self.exit(root))
         btn.grid(row=rows+1, column=0, columnspan=2, sticky="news")
 
-        label = Label(root, textvariable=self.text)
-        label.grid(row=rows+2, column=0, columnspan=2, padx=5, pady=5)
+        btn = Button(frame, text="Close", command=lambda: self.exit(root, files))
+        btn.grid(row=rows+2, column=0, columnspan=2, sticky="news")
+
+        #label = Label(root, textvariable=self.text)
+        #label.grid(row=rows+3, column=0, columnspan=2, padx=5, pady=5)
 
         frame.columnconfigure(tuple(range(columns)), weight=1)
         frame.rowconfigure(tuple(range(rows+2)), weight=1)
@@ -71,9 +78,10 @@ class GUI:
         selection = get_label_fun()
         if selection == 2:
             swi.update_label()
-        self.update_label(selection)
+        #self.update_label(selection)
         self.master.after(10, self.do_something, get_label_fun, swi)
 
     @staticmethod
-    def exit(root):
+    def exit(root, files):
+        files.close_file()
         root.quit()
