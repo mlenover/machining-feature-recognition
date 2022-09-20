@@ -1,12 +1,12 @@
-import gui
-import swsetup
-import swinterface
-
 try:
     import swconst
 except ImportError:
     import setup
     setup.run()
+
+import gui
+import swsetup
+import swinterface
 
 featureList = ["Simple Hole", "Closed Pocket", "Countersunk Hole", "Opened Pocket", "Counterbore Hole",
                 "Closed Island", "Counterdrilled Hole", "Opened Island", "Tapered Hole", "Inner Fillet", "Closed Slot",
