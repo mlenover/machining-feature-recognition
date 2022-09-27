@@ -1,5 +1,3 @@
-#git test 2
-
 try:
     import swconst
 except ImportError:
@@ -18,7 +16,6 @@ app = swinterface.start_sw()
 print("Solidworks opened, please select a directory")
 files = swinterface.Files(app)
 file = files.open_file()
-files.open_file()
 
 swi = swinterface.FeatureTag(app, featureList)
 my_gui = gui.GUI(featureList, lambda: swinterface.get_selection(app), swi, files)

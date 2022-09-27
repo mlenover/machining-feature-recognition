@@ -1,8 +1,7 @@
 import win32com.client as win32
 import re
 import pythoncom
-from os import listdir, walk
-from os.path import isfile, join
+from os import walk
 import gui
 from swconst import constants
 
@@ -15,17 +14,6 @@ def get_file_list(open_dir):
             f = root + '\\' + file
             if check_file(f):
                 files.append(f)
-
-    #for file in walk(open_dir):
-    #    if isfile(file):
-    #        files.append(file)
-
-    #files = [f for f in listdir(open_dir) if isfile(join(open_dir, f))]
-    #checked_files = []
-
-    #for file in files:
-    #    if check_file(file) is not None:
-    #        checked_files.append(open_dir.replace('/', "\\") + "\\" + file)
 
     return files
 

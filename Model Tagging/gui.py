@@ -1,31 +1,34 @@
-from tkinter import Tk, Label, Button, Frame, StringVar, filedialog
+import tkinter.filedialog
+import tkinter as tk
 import distinctipy
 import pickle
 
 
 def open_directory():
-    open_dir = filedialog.askdirectory()
+    root = tk.Tk()
+    root.withdraw()
+    open_dir = tk.filedialog.askdirectory()
     print(open_dir)
     return open_dir
 
 
 class GUI:
     def __init__(self, feature_list, get_label_fun, swi, files):
-        root = Tk()
+        root = tk.Tk()
 
         self.master = root
-        self.text = StringVar()
+        self.text = tk.StringVar()
         self.text.set("No Face Selected")
 
         root.title("A simple GUI")
         root.geometry("720x550")
         root.attributes("-topmost", True)
 
-        frame = Frame(root)
+        frame = tk.Frame(root)
         root.rowconfigure(0, weight=1)
         root.columnconfigure(0, weight=1)
         frame.grid(row=0, column=0, sticky="news")
-        grid = Frame(frame)
+        grid = tk.Frame(frame)
         grid.grid(sticky="news", column=1, row=1, columnspan=3)
         frame.rowconfigure(1, weight=1)
         frame.columnconfigure(1, weight=1)
@@ -47,16 +50,16 @@ class GUI:
                 rgbval = tuple(int(tup*255) for tup in rgbvals[index])
                 hexval = '#%02x%02x%02x' %(rgbval)
                 feature = feature_list[index]
-                btn = Button(frame, text=feature, bg=hexval, command=lambda f=feature: swi.set_feature(f))
+                btn = tk.Button(frame, text=feature, bg=hexval, command=lambda f=feature: swi.set_feature(f))
                 btn.grid(row=i, column=j, sticky="news")
 
-        btn = Button(frame, text="Non-feature", bg='#CAD1EE', command=lambda: swi.set_feature("No Feature"))
+        btn = tk.Button(frame, text="Non-feature", bg='#CAD1EE', command=lambda: swi.set_feature("No Feature"))
         btn.grid(row=rows, column=0, columnspan=2, sticky="news")
 
-        btn = Button(frame, text="Next file", command=lambda: files.next_file())
+        btn = tk.Button(frame, text="Next file", command=lambda: files.next_file())
         btn.grid(row=rows+1, column=0, columnspan=2, sticky="news")
 
-        btn = Button(frame, text="Close", command=lambda: self.exit(root, files))
+        btn = tk.Button(frame, text="Close", command=lambda: self.exit(root, files))
         btn.grid(row=rows+2, column=0, columnspan=2, sticky="news")
 
         #label = Label(root, textvariable=self.text)
@@ -78,7 +81,6 @@ class GUI:
         selection = get_label_fun()
         if selection == 2:
             swi.update_label()
-        #self.update_label(selection)
         self.master.after(10, self.do_something, get_label_fun, swi)
 
     @staticmethod
