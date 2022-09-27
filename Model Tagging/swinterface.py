@@ -1,7 +1,7 @@
 import win32com.client as win32
 import re
 import pythoncom
-from os import walk
+from os import walk, remove, rmdir, path
 import gui
 from swconst import constants
 
@@ -83,6 +83,21 @@ class Files:
         file_error = file_warning = win32.VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
         self.app.ActiveDoc.Save3(constants.swSaveAsOptions_Silent, file_error, file_warning)
         self.app.CloseAllDocuments(True)
+
+    def delete_file(self):
+        self.close_file()
+        remove(self.file)
+
+        directory = path.dirname(self.file)
+        for (root, dirs, f_names) in walk(directory):
+            if f_names == []:
+                rmdir(root)
+
+        self.file = get_next_file(self.file_list)
+        if self.file is not None:
+            self.open_file()
+        else:
+            exit()
 
     def get_file(self):
         return self.file
