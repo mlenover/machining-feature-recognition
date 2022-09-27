@@ -1,21 +1,33 @@
 import win32com.client as win32
 import re
 import pythoncom
-from os import listdir
+from os import listdir, walk
 from os.path import isfile, join
 import gui
 from swconst import constants
 
 
 def get_file_list(open_dir):
-    files = [f for f in listdir(open_dir) if isfile(join(open_dir, f))]
-    checked_files = []
+    open_dir = open_dir.replace('/', "\\")
+    files = []
+    for root, d_names, f_names in walk(open_dir):
+        for file in f_names:
+            f = root + '\\' + file
+            if check_file(f):
+                files.append(f)
 
-    for file in files:
-        if check_file(file) is not None:
-            checked_files.append(open_dir.replace('/', "\\") + "\\" + file)
+    #for file in walk(open_dir):
+    #    if isfile(file):
+    #        files.append(file)
 
-    return checked_files
+    #files = [f for f in listdir(open_dir) if isfile(join(open_dir, f))]
+    #checked_files = []
+
+    #for file in files:
+    #    if check_file(file) is not None:
+    #        checked_files.append(open_dir.replace('/', "\\") + "\\" + file)
+
+    return files
 
 
 def get_next_file(file_list):
@@ -81,7 +93,7 @@ class Files:
 
     def close_file(self):
         file_error = file_warning = win32.VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
-        self.app.ActiveDoc.Save3(constants.swSaveAsOptions_SaveReferenced, file_error, file_warning)
+        self.app.ActiveDoc.Save3(constants.swSaveAsOptions_Silent, file_error, file_warning)
         self.app.CloseAllDocuments(True)
 
     def get_file(self):
