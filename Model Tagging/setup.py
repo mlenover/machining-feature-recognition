@@ -1,8 +1,10 @@
 import os
+import subprocess
 
-MAKEPY_LOCATION = r"C:\Users\MLeno\AppData\Local\Programs\Python\Python310\Lib\site-packages\win32com\client"
 SOLIDWORKS_LOCATION = r"C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS"
 
 def run():
-    os.system(r'python {}\makepy.py -o swconst.py -v "{}\swconst.tlb"'.format(MAKEPY_LOCATION, SOLIDWORKS_LOCATION))
-    os.system(r'python {}\makepy.py -o swfuncs.py -v "{}\sldworks.tlb"'.format(MAKEPY_LOCATION, SOLIDWORKS_LOCATION))
+    wd = os.getcwd()
+    makepy_dir = wd + '\modeltaggingvenv\Lib\site-packages\win32com\client'
+    subprocess.run(r'modeltaggingvenv\Scripts\python "{}\makepy.py" -o swfuncs.py -v "{}\sldworks.tlb"'.format(makepy_dir, SOLIDWORKS_LOCATION))
+    subprocess.run(r'modeltaggingvenv\Scripts\python "{}\makepy.py" -o swconst.py -v "{}\swconst.tlb"'.format(makepy_dir, SOLIDWORKS_LOCATION))
