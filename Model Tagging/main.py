@@ -3,6 +3,7 @@ try:
 except ImportError:
     import setup
     setup.run()
+    import swconst
 
 import gui
 import swinterface

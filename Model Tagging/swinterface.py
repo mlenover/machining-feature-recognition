@@ -80,12 +80,16 @@ class Files:
         return True
 
     def close_file(self):
-        file_error = file_warning = win32.VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
-        self.app.ActiveDoc.Save3(constants.swSaveAsOptions_Silent, file_error, file_warning)
+        pathname = self.file
+        filetype = path.splitext(pathname)[1]
+        pathname = path.splitext(pathname)[0] + '.sldprt'
+        self.app.ActiveDoc.SaveAs3(pathname, 0, 2)
         self.app.CloseAllDocuments(True)
+        if filetype != '.sldprt' and filetype != '.SLDPRT':
+            remove(self.file)
 
     def delete_file(self):
-        self.close_file()
+        self.app.CloseAllDocuments(True)
         remove(self.file)
 
         directory = path.dirname(self.file)

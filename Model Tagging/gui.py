@@ -56,17 +56,20 @@ class GUI:
         btn = tk.Button(frame, text="Non-feature", bg='#CAD1EE', command=lambda: swi.set_feature("No Feature"))
         btn.grid(row=rows, column=0, columnspan=2, sticky="news")
 
-        btn = tk.Button(frame, text="Next file", command=lambda: files.next_file())
+        btn = tk.Button(frame, text="Reject", command=lambda: files.delete_file())
         btn.grid(row=rows+1, column=0, columnspan=2, sticky="news")
 
-        btn = tk.Button(frame, text="Close", command=lambda: self.exit(root, files))
+        btn = tk.Button(frame, text="Next file", command=lambda: files.next_file())
         btn.grid(row=rows+2, column=0, columnspan=2, sticky="news")
+
+        btn = tk.Button(frame, text="Close", command=lambda: self.exit(root, files))
+        btn.grid(row=rows+3, column=0, columnspan=2, sticky="news")
 
         #label = Label(root, textvariable=self.text)
         #label.grid(row=rows+3, column=0, columnspan=2, padx=5, pady=5)
 
         frame.columnconfigure(tuple(range(columns)), weight=1)
-        frame.rowconfigure(tuple(range(rows+2)), weight=1)
+        frame.rowconfigure(tuple(range(rows+3)), weight=1)
 
         self.master.after(10, self.do_something, get_label_fun, swi)
 
