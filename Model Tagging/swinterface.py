@@ -125,7 +125,7 @@ class FeatureTag:
         self.colordict = []
         self.features = features[:]
         self.features.insert(0, "No Feature")
-        self.currFeature = 0
+        self.currFeature = "No Feature"
 
     def set_colors(self, colors):
         self.colors = colors[:]
