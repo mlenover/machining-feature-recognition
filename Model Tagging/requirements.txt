@@ -4,3 +4,4 @@ makepy==0.0.26
 pywin32==304
 typing==3.7.4.3
 distinctipy==1.2.2
+numpy==1.23.4

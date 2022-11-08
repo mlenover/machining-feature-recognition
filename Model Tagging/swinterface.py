@@ -68,16 +68,16 @@ class Files:
 
         if file_type == 'sldprt':
             self.app.OpenDoc6(file_name, 1, 1, "", file_error, file_warning)
+            return True
 
         elif file_type == 'step':
             sw_import_step_data = self.app.GetImportFileData(file_name)
             sw_import_step_data.MapConfigurationData = True
             self.app.LoadFile4(file_name, "r", sw_import_step_data, file_error)
+            return True
 
         else:
             return False
-
-        return True
 
     def close_file(self):
         pathname = self.file
