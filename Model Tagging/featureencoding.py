@@ -1,7 +1,15 @@
 from tkinter import messagebox, filedialog
 import swinterface
 import win32com.client as win32
-from swconst import constants
+import math
+
+try:
+    from swconst import constants
+except ImportError:
+    import setup
+    setup.run()
+    from swconst import constants
+
 import pickle
 
 featureList = ["Simple Hole", "Closed Pocket", "Countersunk Hole", "Opened Pocket", "Counterbore Hole",
@@ -36,15 +44,36 @@ data = [[], []]
 #Try to open it
 while files.open_file():
     print("New File")
+    app.ActiveDoc.FeatureManager.ShowBodies()
     bodies = app.ActiveDoc.GetBodies2(constants.swAllBodies, True)
+    selMgr = app.ActiveDoc.SelectionManager
+    selData = selMgr.CreateSelectData
 
     # For each body in file...
     for body in bodies:
         # For each face in body...
         face = body.GetFirstFace()
         while face is not None:
+            app.ActiveDoc.ClearSelection2(True)
+            #face.Select4(True, selData)
             # Read face name. Is the name one of the standard tags?
             #rgb
+            rgbvals = pickle.load(open("rgbvals.pickle", "rb"))
+            faceProperties = face.GetMaterialPropertyValues2(constants.swAllConfiguration, None)
+            isFeat = False
+
+            if all(f != -1.0 for f in faceProperties[0:3]):
+                isFeat = False
+                for featIndex, rgbval in enumerate(rgbvals):
+                    if all(abs(faceProperties[j]-rgbval[j]) < 0.004 for j in range(3)):
+                        isFeat = True
+                        print(featureList[featIndex])
+
+                if isFeat is False:
+                    face.Select4(True, selData)
+                    print("Non-Feature")
+
+
             #faceName = face.ModelName
 
             #if faceName in featureList:
