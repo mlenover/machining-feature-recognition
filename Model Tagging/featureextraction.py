@@ -2,11 +2,14 @@ import win32com.client as win32
 import pythoncom
 import re
 import numpy as np
+
 try:
     from swconst import constants
 except ImportError:
     import setup
     setup.run()
+    from swconst import constants
+
 #from comtypes import automation
 
 #sw_const = win32.gencache.EnsureModule('{4687F359-55D0-4CD3-B6CF-2EB42C11F989}', 0, 29, 0).constants
@@ -55,16 +58,16 @@ def assign_face_ids(sw_body):
 
 
 def get_face_type(sw_face):
-    face_types = [[sw_const.PLANE_TYPE, "PLANE_TYPE", 6],
-                  [sw_const.CYLINDER_TYPE, "CYLINDER_TYPE", 5],
-                  [sw_const.CONE_TYPE, "CONE_TYPE", 4],
-                  [sw_const.SPHERE_TYPE, "SPHERE_TYPE", 7],
-                  [sw_const.TORUS_TYPE, "TORUS_TYPE", 8],
-                  [sw_const.BSURF_TYPE, "BSURF_TYPE", 1],
-                  [sw_const.BLEND_TYPE, "BLEND_TYPE", 2],
-                  [sw_const.OFFSET_TYPE, "OFFSET_TYPE", 3],
-                  [sw_const.EXTRU_TYPE, "EXTRU_TYPE", 9],
-                  [sw_const.SREV_TYPE, "SREV_TYPE", 10]]
+    face_types = [[constants.PLANE_TYPE, "PLANE_TYPE", 6],
+                  [constants.CYLINDER_TYPE, "CYLINDER_TYPE", 5],
+                  [constants.CONE_TYPE, "CONE_TYPE", 4],
+                  [constants.SPHERE_TYPE, "SPHERE_TYPE", 7],
+                  [constants.TORUS_TYPE, "TORUS_TYPE", 8],
+                  [constants.BSURF_TYPE, "BSURF_TYPE", 1],
+                  [constants.BLEND_TYPE, "BLEND_TYPE", 2],
+                  [constants.OFFSET_TYPE, "OFFSET_TYPE", 3],
+                  [constants.EXTRU_TYPE, "EXTRU_TYPE", 9],
+                  [constants.SREV_TYPE, "SREV_TYPE", 10]]
 
     sw_surf = sw_face.GetSurface
 
@@ -88,6 +91,10 @@ def get_face_curvature(sw_face):
 
     closest_point = sw_surf.GetClosestPointOn(0, 0, 0)
     eval_point = sw_surf.EvaluateAtPoint(closest_point[0], closest_point[1], closest_point[2])
+
+    if closest_point or eval_point is None:
+        return ["Positive", 1]
+
     a = np.array(closest_point[0:3])
     b = np.array(eval_point[6:9])
     sec_point = a + b*0.01
@@ -119,7 +126,7 @@ def get_outer_loop_edges(sw_face):
     return None
 
 
-def get_face_width(compare_width, sw_face):
+def get_face_width(compare_width, sw_face, app):
     sw_loop = get_outer_loop_edges(sw_face)
     base_face_ID = sw_face.GetFaceId
     sw_edges = sw_loop.GetEdges
@@ -276,8 +283,11 @@ def get_face_angle(sw_co_edge):
     return angle
 
 
-def get_inner_loop_convexity(sw_inner_loops, sw_outer_loop):
+def get_inner_loop_convexity(sw_inner_loops, sw_outer_loop, app, face):
     convexity_feature_vector = np.zeros(2)
+
+    if sw_outer_loop is None:
+        pass
 
     if sw_inner_loops is None:
         return convexity_feature_vector
@@ -285,14 +295,17 @@ def get_inner_loop_convexity(sw_inner_loops, sw_outer_loop):
     for sw_inner_loop in sw_inner_loops:
         sw_inner_co_edge = sw_inner_loop.GetFirstCoEdge
 
-        if sw_inner_co_edge.GetCurve is None:
+        if sw_inner_co_edge is None or sw_inner_co_edge.GetCurve is None:
             continue
 
-        sw_outer_co_edge = sw_outer_loop.GetFirstCoEdge
+        try:
+            sw_outer_co_edge = sw_outer_loop.GetFirstCoEdge
+            circCheck = (sw_inner_co_edge.IsCircle and sw_outer_co_edge.IsCircle)
+            angle = get_face_angle(sw_inner_co_edge)
+        except AttributeError:
+            continue
 
-        angle = get_face_angle(sw_inner_co_edge)
-
-        if sw_inner_co_edge.IsCircle and sw_outer_co_edge.IsCircle:
+        if circCheck:
             sw_inner_center_loc = sw_inner_co_edge.CircleParams[0:3]
             sw_outer_center_loc = sw_outer_co_edge.CircleParams[0:3]
 
@@ -312,6 +325,9 @@ def list_face_convexity(sw_loop):
     sw_co_edge = sw_first_co_edge
 
     while True:
+        if sw_co_edge is None:
+            break
+
         sw_partner_co_edge = sw_co_edge.GetPartner
 
         partner_face = sw_partner_co_edge.GetLoop.GetFace
@@ -369,47 +385,83 @@ def get_faces_with_continuity(sw_loop, is_perp):
     return cont_faces
 
 
-aBodies = open_file()
-
-for swBody in aBodies:
-    assign_face_ids(swBody)
-    swFace = swBody.GetFirstFace()
+def get_feature_vector(swFace, app):
     featureVector = np.zeros(61)
 
-    while True:
-        print("")
-        face_type = get_face_type(swFace)
-        featureVector[0] = face_type[1]
-        print(face_type)
+    face_type = get_face_type(swFace)
+    featureVector[0] = face_type[1]
+    print(face_type)
 
-        face_curvature = get_face_curvature(swFace)
-        featureVector[1] = face_curvature[1]
-        print(face_curvature)
+    face_curvature = get_face_curvature(swFace)
+    featureVector[1] = face_curvature[1]
+    print(face_curvature)
 
-        f_mach_width = 10
-        face_width_f_mach = get_face_width(f_mach_width, swFace)
-        featureVector[2] = face_width_f_mach[1]
-        print(face_width_f_mach)
+    f_mach_width = 10
+    face_width_f_mach = get_face_width(f_mach_width, swFace, app)
+    featureVector[2] = face_width_f_mach[1]
+    print(face_width_f_mach)
 
-        e_mach_width = 10
-        face_width_e_mach = get_face_width(e_mach_width, swFace)
-        featureVector[3] = face_width_e_mach[1]
-        print(face_width_e_mach)
+    e_mach_width = 10
+    face_width_e_mach = get_face_width(e_mach_width, swFace, app)
+    featureVector[3] = face_width_e_mach[1]
+    print(face_width_e_mach)
 
-        outerLoop, numOuterLoopFaces = get_outer_loop(swFace)
+    outerLoop, numOuterLoopFaces = get_outer_loop(swFace)
 
-        face_convexity = list_face_convexity(outerLoop)
-        featureVector[4:59] = face_convexity.flatten()
-        print(face_convexity)
+    face_convexity = list_face_convexity(outerLoop)
+    featureVector[4:59] = face_convexity.flatten()
+    print(face_convexity)
 
-        innerLoops = get_inner_loops(swFace)
-        inner_convexity = get_inner_loop_convexity(innerLoops, outerLoop)
-        featureVector[59:61] = inner_convexity
-        print(inner_convexity)
+    innerLoops = get_inner_loops(swFace)
+    inner_convexity = get_inner_loop_convexity(innerLoops, outerLoop, app, swFace)
+    featureVector[59:61] = inner_convexity
+    print(inner_convexity)
 
-        print(swFace.GetFeature.Name)
+    #print(swFace.GetFeature.Name)
+    print("")
 
-        swFace = swFace.GetNextFace
 
-        if swFace is None:
-            break
+#aBodies = open_file()
+
+#for swBody in aBodies:
+#    assign_face_ids(swBody)
+#    swFace = swBody.GetFirstFace()
+#    featureVector = np.zeros(61)
+
+#    while True:
+#        print("")
+#        face_type = get_face_type(swFace)
+#        featureVector[0] = face_type[1]
+#        print(face_type)
+
+#        face_curvature = get_face_curvature(swFace)
+#        featureVector[1] = face_curvature[1]
+#        print(face_curvature)
+
+#        f_mach_width = 10
+#        face_width_f_mach = get_face_width(f_mach_width, swFace)
+#        featureVector[2] = face_width_f_mach[1]
+#        print(face_width_f_mach)
+
+#        e_mach_width = 10
+#        face_width_e_mach = get_face_width(e_mach_width, swFace)
+#        featureVector[3] = face_width_e_mach[1]
+#        print(face_width_e_mach)
+
+#        outerLoop, numOuterLoopFaces = get_outer_loop(swFace)
+
+#        face_convexity = list_face_convexity(outerLoop)
+#        featureVector[4:59] = face_convexity.flatten()
+#        print(face_convexity)
+
+#        innerLoops = get_inner_loops(swFace)
+#        inner_convexity = get_inner_loop_convexity(innerLoops, outerLoop)
+#        featureVector[59:61] = inner_convexity
+#        print(inner_convexity)
+
+#        print(swFace.GetFeature.Name)
+
+#        swFace = swFace.GetNextFace
+
+#        if swFace is None:
+#            break
