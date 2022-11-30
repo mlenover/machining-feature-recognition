@@ -4,6 +4,7 @@ import pythoncom
 from os import walk, remove, rmdir, path
 import gui
 from swconst import constants
+import sys
 
 
 def get_file_list(open_dir):
@@ -64,27 +65,24 @@ class Files:
         self.app = app
 
     def open_file(self):
-        try:
+        if self.file is not None:
             file_name = self.file
             file_type = check_file(file_name)
             print(file_name)
-
+    
             file_error = file_warning = win32.VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
-
+    
             if file_type == 'sldprt':
                 self.app.OpenDoc6(file_name, 1, 1, "", file_error, file_warning)
                 return True
-
+    
             elif file_type == 'step':
                 sw_import_step_data = self.app.GetImportFileData(file_name)
                 sw_import_step_data.MapConfigurationData = True
                 self.app.LoadFile4(file_name, "r", sw_import_step_data, file_error)
                 return True
-
-            else:
-                return False
-        except:
-            print("HELP")
+    
+        return False
 
     def close_file(self):
         pathname = self.file
@@ -108,7 +106,7 @@ class Files:
         if self.file is not None:
             self.open_file()
         else:
-            exit()
+            sys.exit(1)
 
     def get_file(self):
         return self.file
@@ -120,7 +118,8 @@ class Files:
         if self.file is not None:
             self.open_file()
         else:
-            exit()
+            return ""
+            #sys.exit(1)
 
         return self.file
 

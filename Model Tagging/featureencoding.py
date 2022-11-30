@@ -3,6 +3,7 @@ import swinterface
 import win32com.client as win32
 import math
 import csv
+import numpy as np
 
 try:
     from swconst import constants
@@ -24,17 +25,19 @@ root = Tk()
 #Prompt user to select new/existing data file
 is_existing_file = messagebox.askquestion("Data File Selection", "Would you like to append data to an existing data file?")
 
+root.destroy()
+
 if is_existing_file == "yes":
     # Existing file: prompt user to select file
     #import csv here
     #save data into data variable
     pass
 else:
+    csvFileName = filedialog.asksaveasfilename(initialfile='Data File.csv', defaultextension='.csv')
+    csvFile = open(csvFileName, 'w', newline='')
     pass
     # New file: prompt user to select directory
-    #folder = filedialog.askdirectory()
 
-root.destroy()
 
 #Open Solidworks
 app = swinterface.start_sw()
@@ -46,6 +49,9 @@ files = swinterface.Files(app)
 
 # Create data variable array. List of arrays, one per feature
 data = [[], []]
+
+# Create the csv writer
+csvWriter = csv.writer(csvFile)
 
 #For each file...
 #Try to open it
@@ -85,7 +91,21 @@ while files.open_file():
 
             if feat:
                 print(feat)
-                get_feature_vector(face, app)
+                
+                if feat == "No Feature":
+                    classIndex = 0
+                else:
+                    classIndex = featureList.index(feat) + 1
+                
+                featVec = get_feature_vector(face, app)
+                csvWriter.writerow(np.insert(featVec, 0, classIndex))
+                #csvFile.close()
+                
+                #pass
+            
+                #csvFile = open(csvFileName, 'w', newline='')
+                
+                
 
             #faceName = face.ModelName
 
@@ -96,11 +116,12 @@ while files.open_file():
             # Find all instances of that feature in other feature matrices (if row in array)
             # If there are any duplicates, remove all instances of the feature vector
             # Otherwise, append data variable to appropriate feature matrix
-            pass
+            # pass
             face = face.GetNextFace
 
     files.next_file()
 
+csvFile.close()
 #For each body in file...
 #For each face in body...
 #Read face name. Is the name one of the standard tags?

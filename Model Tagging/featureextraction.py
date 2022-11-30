@@ -419,6 +419,8 @@ def get_feature_vector(swFace, app):
 
     #print(swFace.GetFeature.Name)
     print("")
+    
+    return featureVector
 
 
 #aBodies = open_file()
