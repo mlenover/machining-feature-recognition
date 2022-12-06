@@ -3,7 +3,7 @@ import re
 import pythoncom
 from os import walk, remove, rmdir, path
 import gui
-from swconst import constants
+from setup import constants
 import sys
 
 

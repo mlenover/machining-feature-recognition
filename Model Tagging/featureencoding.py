@@ -4,14 +4,7 @@ import win32com.client as win32
 import math
 import csv
 import numpy as np
-
-try:
-    from swconst import constants
-except ImportError:
-    import setup
-    setup.run()
-    from swconst import constants
-
+from setup import constants
 import pickle
 from featureextraction import get_feature_vector
 

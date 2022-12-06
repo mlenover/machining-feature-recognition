@@ -1,10 +1,4 @@
-try:
-    import swconst
-except ImportError:
-    import setup
-    setup.run()
-    import swconst
-
+from setup import constants
 import gui
 import swinterface
 
