@@ -60,7 +60,7 @@ class GUI:
         btn = tk.Button(frame, text="Reject", command=lambda: files.delete_file())
         btn.grid(row=rows+1, column=0, columnspan=2, sticky="news")
 
-        btn = tk.Button(frame, text="Next file", command=lambda: files.next_file())
+        btn = tk.Button(frame, text="Next file", command=lambda: True if (files.next_file()) else root.destroy())
         btn.grid(row=rows+2, column=0, columnspan=2, sticky="news")
 
         btn = tk.Button(frame, text="Close", command=lambda: self.exit(root, files))
@@ -90,4 +90,4 @@ class GUI:
     @staticmethod
     def exit(root, files):
         files.close_file()
-        root.quit()
+        root.destroy()

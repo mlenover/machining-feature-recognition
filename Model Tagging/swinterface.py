@@ -65,7 +65,8 @@ class Files:
         self.app = app
 
     def open_file(self):
-        if self.file is not None:
+        fTest = self.file
+        if self.file is not None or "":
             file_name = self.file
             file_type = check_file(file_name)
             print(file_name)
@@ -86,12 +87,14 @@ class Files:
 
     def close_file(self):
         pathname = self.file
-        filetype = path.splitext(pathname)[1]
-        pathname = path.splitext(pathname)[0] + '.sldprt'
-        self.app.ActiveDoc.SaveAs3(pathname, 0, 2)
-        self.app.CloseAllDocuments(True)
-        if filetype != '.sldprt' and filetype != '.SLDPRT':
-            remove(self.file)
+        
+        if pathname is not "":
+            filetype = path.splitext(pathname)[1]
+            pathname = path.splitext(pathname)[0] + '.sldprt'
+            self.app.ActiveDoc.SaveAs3(pathname, 0, 2)
+            self.app.CloseAllDocuments(True)
+            if filetype != '.sldprt' and filetype != '.SLDPRT':
+                remove(self.file)
 
     def delete_file(self):
         self.app.CloseAllDocuments(True)

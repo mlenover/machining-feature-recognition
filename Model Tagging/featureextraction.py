@@ -126,27 +126,51 @@ def get_outer_loop_edges(sw_face):
     return None
 
 
+def is_faces_adjacent(face_0, face_1):
+    f0_edges = face_0.GetEdges
+    
+    for f0_edge in f0_edges:
+        faces_at_edge = f0_edge.getTwoAdjacentFaces2
+        
+        if faces_at_edge[0].IsSame(face_1) or faces_at_edge[1].IsSame(face_1):
+            return True
+    
+    return False
+    
+    
+
 def get_face_width(compare_width, sw_face, app):
+    sw_part = app.ActiveDoc
+    sw_sel_data = sw_part.SelectionManager.CreateSelectData
     sw_loop = get_outer_loop_edges(sw_face)
     base_face_ID = sw_face.GetFaceId
     sw_edges = sw_loop.GetEdges
-
+    min_dist = 0
+    
+    #Get list of all adjacent faces
     adjacent_faces = []
-    for sw_edge in sw_edges:
-        sw_faces = sw_edge.GetTwoAdjacentFaces2
-
-        if sw_faces[0].GetFaceId == base_face_ID:
-            adjacent_face = sw_faces[1]
-        else:
-            adjacent_face = sw_faces[0]
-
-        adjacent_faces.append(adjacent_face)
+    
+    sw_loop = sw_face.GetFirstLoop
+    
+    while sw_loop is not None:
+        sw_co_edges = sw_loop.GetCoEdges
+        
+        if sw_co_edges is not None:
+            for sw_co_edge in sw_co_edges:
+                sw_partner_co_edge = sw_co_edge.GetPartner
+                sw_adjacent_face = sw_partner_co_edge.GetLoop.GetFace
+                adjacent_faces.append(sw_adjacent_face)
+            
+        sw_loop = sw_loop.GetNext
 
     #check for parallel faces
     parallel_faces_i = []
 
-    for i, first_adjacent_face in enumerate(adjacent_faces):
+    for i, first_adjacent_face in enumerate(adjacent_faces):       
         for j, second_adjacent_face in enumerate(adjacent_faces[i+1:]):
+            #sw_part.ClearSelection2(True)
+            #first_adjacent_face.Select4(True, sw_sel_data)
+            #second_adjacent_face.Select4(True, sw_sel_data)
             if first_adjacent_face.GetSurface.isPlane and second_adjacent_face.GetSurface.isPlane:
                 v1 = first_adjacent_face.Normal
                 v2 = second_adjacent_face.Normal
@@ -180,17 +204,31 @@ def get_face_width(compare_width, sw_face, app):
 
             var_pos1 = win32.VARIANT(pythoncom.VT_BYREF | pythoncom.VT_VARIANT, None)
             var_pos2 = win32.VARIANT(pythoncom.VT_BYREF | pythoncom.VT_VARIANT, None)
-
+            
+            
             for i, f0 in enumerate(adjacent_faces):
-                for j, f1 in enumerate(adjacent_faces[i+2:]):
-                    if not (i == 0 and j == num_adj_faces - 1):
+                for j, f1 in enumerate(adjacent_faces[i+2:]):          
+                    #if not (i == 0 and j == num_adj_faces - 1):
+                    if not is_faces_adjacent(f0, f1):
+                        #sw_part.ClearSelection2(True)
+                        #f0.Select4(True, sw_sel_data)
+                        #f1.Select4(True, sw_sel_data)
                         dist = app.ActiveDoc.ClosestDistance(f0, f1, var_pos1, var_pos2)
-                        if first_dist:
-                            min_dist = dist
-                            first_dist = False
-                        elif dist < min_dist:
-                            min_dist = dist
-
+                        
+                        if not np.isclose(dist,0):
+                            if first_dist:
+                                min_dist = dist
+                                first_dist = False
+                                sw_part.ClearSelection2(True)
+                                f0.Select4(True, sw_sel_data)
+                                f1.Select4(True, sw_sel_data)
+                            elif dist < min_dist:
+                                min_dist = dist
+                                sw_part.ClearSelection2(True)
+                                f0.Select4(True, sw_sel_data)
+                                f1.Select4(True, sw_sel_data)
+                                
+    print(min_dist)                    
     if min_dist > compare_width:
         return ["Longer", 1]
     else:
@@ -284,39 +322,90 @@ def get_face_angle(sw_co_edge):
 
 
 def get_inner_loop_convexity(sw_inner_loops, sw_outer_loop, app, face):
+    
     convexity_feature_vector = np.zeros(2)
-
-    if sw_outer_loop is None:
-        pass
-
-    if sw_inner_loops is None:
-        return convexity_feature_vector
-
-    for sw_inner_loop in sw_inner_loops:
-        sw_inner_co_edge = sw_inner_loop.GetFirstCoEdge
-
-        if sw_inner_co_edge is None or sw_inner_co_edge.GetCurve is None:
-            continue
-
-        try:
-            sw_outer_co_edge = sw_outer_loop.GetFirstCoEdge
-            circCheck = (sw_inner_co_edge.IsCircle and sw_outer_co_edge.IsCircle)
-            angle = get_face_angle(sw_inner_co_edge)
-        except AttributeError:
-            continue
-
-        if circCheck:
-            sw_inner_center_loc = sw_inner_co_edge.CircleParams[0:3]
-            sw_outer_center_loc = sw_outer_co_edge.CircleParams[0:3]
-
-            if sw_inner_center_loc == sw_outer_center_loc:
-                if angle > np.pi:
-                    convexity_feature_vector[0] = 1
-
-        elif angle <= np.pi:
-            convexity_feature_vector[1] = 1
-
+        
+    convexity_feature_vector[0] = get_concave_inner_loop(sw_inner_loops)
+    convexity_feature_vector[1] = get_convex_centered_inner_loop(sw_inner_loops, sw_outer_loop)
+        
     return convexity_feature_vector
+
+
+def get_concave_inner_loop(sw_inner_loops):
+    for sw_inner_loop in sw_inner_loops:
+        sw_co_edges = sw_inner_loop.GetCoEdges
+        
+        is_concave = True
+        for sw_co_edge in sw_co_edges:
+            angle = get_face_angle(sw_co_edge)
+            if angle > np.pi: #Check if loop is NOT concave (i.e. convex)
+                is_concave = False
+                break
+        
+        if is_concave:
+            return 1
+    
+    return 0
+                
+
+def get_convex_centered_inner_loop(sw_inner_loops, sw_outer_loop):
+    sw_outer_loop_params = []
+    
+    #for each edge in outer loop... getEdges function
+    for sw_outer_edge in sw_outer_loop.getEdges:
+        #check if it's a circle... IsCircle function
+        sw_outer_curve = sw_outer_edge.GetCurve
+        if sw_outer_curve.IsCircle:
+            #if it is, add centroid location to 6xn array (xyz loc & axis dir vec)
+            sw_outer_loop_params.append(sw_outer_curve.CircleParams[0:6])
+            
+    #if centroid array has at least one entry...
+    if len(sw_outer_loop_params):
+        #for each inner loop...
+        for sw_inner_loop in sw_inner_loops:
+            
+            #for each coedge in loop...
+            for sw_inner_co_edge in sw_inner_loop.GetCoEdges:
+                
+                #FIRST check convexity. If angle < pi, break
+                if get_face_angle(sw_inner_co_edge) < np.pi:
+                    break
+                
+                #Get edge from coedge using GetEdge
+                sw_inner_edge = sw_inner_co_edge.GetEdge
+                sw_inner_curve = sw_inner_edge.GetCurve
+                
+                #Check if edge isCircle
+                if not sw_inner_curve.isCircle:
+                    #if not, break
+                    break
+                
+                #if it is
+                else:
+                    #Find centroid of edge
+                    sw_inner_loop_param = sw_inner_curve.CircleParams[0:6]
+                    
+                    
+                    #For each centroid in outer edge array,
+                    for sw_outer_loop_param in sw_outer_loop_params:
+                        #If equal to inner centroid, set flag 2 and break
+                        #Two checks: both direction vectors are collinear (cross product ~= 0)
+                        dir_cross_p = np.cross(sw_outer_loop_param[3:6], sw_inner_loop_param[3:6])
+                        
+                        if np.allclose(dir_cross_p, [0, 0, 0]):
+                            #Vector formed by linking both centroids collinear either 0 or parallel to one of the direction vectors
+                            linked_pos_dir = np.subtract(sw_outer_loop_param[0:3], sw_inner_loop_param[0:3])
+                            
+                            if np.allclose(linked_pos_dir, [0, 0, 0]):
+                                return 1
+                            
+                            pos_cross_p = np.cross(linked_pos_dir, sw_outer_loop_param[3:6])
+                            
+                            if np.allclose(pos_cross_p, 0):
+                                #this means if only one edge is concentric, loop still considered in center. For example, d-shaft
+                                return 1
+                
+    return 0
 
 
 def list_face_convexity(sw_loop):
@@ -396,12 +485,12 @@ def get_feature_vector(swFace, app):
     featureVector[1] = face_curvature[1]
     print(face_curvature)
 
-    f_mach_width = 10
+    f_mach_width = 0.05 #5 cm
     face_width_f_mach = get_face_width(f_mach_width, swFace, app)
     featureVector[2] = face_width_f_mach[1]
     print(face_width_f_mach)
 
-    e_mach_width = 10
+    e_mach_width = 0.02 #2 cm
     face_width_e_mach = get_face_width(e_mach_width, swFace, app)
     featureVector[3] = face_width_e_mach[1]
     print(face_width_e_mach)
