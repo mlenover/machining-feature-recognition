@@ -88,7 +88,7 @@ class Files:
     def close_file(self):
         pathname = self.file
         
-        if pathname is not "":
+        if pathname != "":
             filetype = path.splitext(pathname)[1]
             pathname = path.splitext(pathname)[0] + '.sldprt'
             self.app.ActiveDoc.SaveAs3(pathname, 0, 2)
