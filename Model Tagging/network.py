@@ -67,12 +67,23 @@ optimizer = optim.Adam(model.parameters())
 for epoch in range(100):
     
     running_loss = 0.0
+    correct = 0
+    
     for i, sample in enumerate(train_data):
         outputs = model(sample)
         loss = criterion(outputs, labels[i])
+        running_loss = running_loss + loss.item()
+        
+        estimatedclass = torch.argmax(outputs, dim=0).item()
+        actualclass = labels[i].item()
+        
+        if estimatedclass == actualclass:
+            correct = correct + 1
+        
         loss.backward()
         optimizer.step()
         
         if (i+1) % 100 == 0:
-            print ('Epoch [%d/%d], Iter [%d] Loss: %.4f' %(epoch+1, 10, i+1, loss.item()))
-        
+            print ('Epoch [%d/%d], Iter [%d]' %(epoch+1, 10, i+1))
+    
+    print('Epoch complete, total loss : %.4f, accuracy : %.2f %%' %(running_loss, correct*100/(i+1)))
