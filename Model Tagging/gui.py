@@ -6,6 +6,7 @@ import pickle
 
 def open_directory():
     root = tk.Tk()
+    root.lift()
     #root.withdraw()
     open_dir = tk.filedialog.askdirectory()
     root.destroy()

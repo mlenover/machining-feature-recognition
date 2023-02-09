@@ -8,6 +8,4 @@ numpy==1.23.4
 spyder
 --extra-index-url https://download.pytorch.org/whl/cu116
 torch
-torchvision 
-torchaudio
 torchdata

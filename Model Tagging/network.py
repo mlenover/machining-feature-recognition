@@ -1,12 +1,12 @@
 import os
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
 import torch.optim as optim
 import torchdata.datapipes as dp
 import csv
 import numpy as np
+import matplotlib.pyplot as plt
+from crossover import generate_data
 
 device = "cuda" if torch.cuda.is_available else "cpu"
 print(f"Using {device} device")
@@ -19,7 +19,24 @@ with open(os.getcwd() + FOLDER + 'Data File.csv', 'r', newline='') as file:
     for row in reader:
         data.append(row)
 
-data = np.array(data).astype(float)
+unique_data, generated_data = generate_data(data)
+
+data = np.concatenate((unique_data, generated_data))
+#data = np.unique(data, axis=0).astype(int)
+
+classes = data[:,0].astype(int)
+classes = np.sort(classes)
+class_dict = {}
+
+for i in classes:
+    class_dict[i] = class_dict.get(i, 0) + 1
+
+# print(class_dict.keys())
+# print(class_dict.values())
+
+a0 = plt.figure(0)
+plt.bar(class_dict.keys(), class_dict.values())
+plt.pause(0.05)
 
 labels = data[:,0].flatten()
 labels = torch.from_numpy(labels)
@@ -30,11 +47,11 @@ train_data = np.rot90(train_data)
 train_data = torch.from_numpy(data[:,1:])
 train_data = train_data.to(device=device, dtype=torch.float32)
 
-datapipe = dp.iter.FileLister([FOLDER]).filter(filter_fn=lambda filename: filename.endswith('.csv'))
-datapipe = dp.iter.FileOpener(datapipe, mode='rt')
-datapipe = datapipe.parse_csv(delimiter=',')
-N_ROWS = 1876  # total number of rows of data
-train, valid = datapipe.random_split(total_length=N_ROWS, weights={"train": 0.5, "valid": 0.5}, seed=0)                                            
+#datapipe = dp.iter.FileLister([FOLDER]).filter(filter_fn=lambda filename: filename.endswith('.csv'))
+#datapipe = dp.iter.FileOpener(datapipe, mode='rt')
+#datapipe = datapipe.parse_csv(delimiter=',')
+#N_ROWS = 162  # total number of rows of data
+#train, valid = datapipe.random_split(total_length=N_ROWS, weights={"train": 0.5, "valid": 0.5}, seed=0)                                            
 
 class NeuralNetwork(nn.Module):
     def __init__(self):
@@ -64,10 +81,18 @@ print(model)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters())
 
-for epoch in range(100):
+a1 = plt.figure(1)
+plt.axis()
+completed_epochs = []
+loss_history = []
+accuracy_history = []
+
+for epoch in range(200):
     
+    completed_epochs.append(epoch)
     running_loss = 0.0
     correct = 0
+    accuracy = 0.0
     
     for i, sample in enumerate(train_data):
         outputs = model(sample)
@@ -85,5 +110,18 @@ for epoch in range(100):
         
         if (i+1) % 100 == 0:
             print ('Epoch [%d/%d], Iter [%d]' %(epoch+1, 10, i+1))
+            
+    #accuracy = running_loss, correct*100/(i+1)
+    accuracy = correct*100/(i+1)
+    print('Epoch complete, total loss : %.4f, accuracy : %.2f %%' %(running_loss, accuracy))
     
-    print('Epoch complete, total loss : %.4f, accuracy : %.2f %%' %(running_loss, correct*100/(i+1)))
+    loss_history.append(running_loss)
+    accuracy_history.append(accuracy)
+    
+    plt.clf()
+    plt.plot(completed_epochs, accuracy_history)
+    #plt.ylim(0, 5000)
+    plt.pause(0.05)
+
+plt.show()
+pass
