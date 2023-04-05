@@ -85,8 +85,12 @@ class Files:
     
         return False
 
-    def close_file(self):
+    def close_file(self, doSave = True):
         pathname = self.file
+        
+        if doSave == False:
+            self.app.CloseAllDocuments(True)
+            return
         
         if pathname != "":
             filetype = path.splitext(pathname)[1]
@@ -114,8 +118,8 @@ class Files:
     def get_file(self):
         return self.file
 
-    def next_file(self):
-        self.close_file()
+    def next_file(self, doSave = True):
+        self.close_file(doSave)
         self.file = get_next_file(self.file_list)
 
         if self.file is not None:
