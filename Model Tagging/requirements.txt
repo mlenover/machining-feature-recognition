@@ -6,6 +6,9 @@ typing==3.7.4.3
 distinctipy==1.2.2
 numpy==1.23.4
 spyder
---extra-index-url https://download.pytorch.org/whl/cu116
 torch
 torchdata
+--extra-index-url https://download.pytorch.org/whl/cu118
+matplotlib
+pandas
+scikit-learn

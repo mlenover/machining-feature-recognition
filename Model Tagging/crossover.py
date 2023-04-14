@@ -7,7 +7,7 @@ def generate_data(data):
     unique_data = np.unique(data, axis=0).astype(int) #remove duplicate rows
     #unique_data = np.array(data).astype(float)
     
-    data_for_dist_cals = data
+    data_for_dist_cals = unique_data
     
     classes = unique_data[:,0].astype(int)
     classes = np.sort(classes)
