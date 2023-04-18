@@ -12,7 +12,7 @@ device = "cuda" if torch.cuda.is_available else "cpu"
 print(f"Using {device} device")
 
 do_id3_tree = False
-do_crossover = False
+do_crossover = True
 do_remove_duplicates = True
 
 #import the csv
@@ -42,7 +42,7 @@ if(do_id3_tree):
     sorted_class_dict = sorted(class_dict.values())
     num_classes = len(sorted_class_dict)
     second_greatest_class_samples = sorted_class_dict[num_classes-2]
-    id3_tree = minimize_class_imbalance_id3(data, over_rep_class=None, max_depth=1, max_class_samples=None)
+    id3_tree = minimize_class_imbalance_id3(data, over_rep_class=None, max_depth=2, max_class_samples=None)
 
 np_data = np.array(data[1:]).astype(int)
 #generate some new data using crossover
@@ -209,7 +209,7 @@ model = NeuralNetwork().to(device)
 print(model)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(),lr=1e-6)
+optimizer = optim.Adam(model.parameters(),lr=1e-5)
 
 a2 = plt.figure(2)
 plt.axis()
@@ -219,7 +219,7 @@ accuracy_history = []
 
 m = nn.Dropout(p=0.2)
 
-for epoch in range(3000):
+for epoch in range(400):
     
     completed_epochs.append(epoch)
     running_loss = 0.0

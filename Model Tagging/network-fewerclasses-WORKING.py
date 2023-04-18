@@ -13,11 +13,11 @@ print(f"Using {device} device")
 
 do_id3_tree = False
 do_crossover = False
-do_remove_duplicates = True
+do_remove_duplicates = False
 
 #import the csv
 FOLDER = "data/"
-data = pd.read_csv(FOLDER + "Data File - April 17 Added Non Feature Data.csv")
+data = pd.read_csv(FOLDER + "Data File - April 12 Fewer Classes.csv")
 header = list(data.head(0))
 num_headers = len(header)
 header_dict = dict(zip(header, range(0,num_headers)))
@@ -42,7 +42,7 @@ if(do_id3_tree):
     sorted_class_dict = sorted(class_dict.values())
     num_classes = len(sorted_class_dict)
     second_greatest_class_samples = sorted_class_dict[num_classes-2]
-    id3_tree = minimize_class_imbalance_id3(data, over_rep_class=None, max_depth=1, max_class_samples=None)
+    id3_tree = minimize_class_imbalance_id3(data, over_rep_class=0, max_depth=1, max_class_samples=None)
 
 np_data = np.array(data[1:]).astype(int)
 #generate some new data using crossover
@@ -146,41 +146,15 @@ class NeuralNetwork(nn.Module):
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(61, 50),
             nn.ReLU(),
-            nn.Linear(50, 55),
-            nn.ReLU(),
-            nn.Linear(55, 45),
-            nn.ReLU(),
-            nn.Linear(45, 50),
-            nn.ReLU(),
             nn.Linear(50, 40),
-            nn.ReLU(),
-            nn.Linear(40, 45),
-            nn.ReLU(),
-            nn.Linear(45, 35),
-            nn.ReLU(),
-            nn.Linear(35, 40),
             nn.ReLU(),
             nn.Linear(40, 30),
             nn.ReLU(),
-            nn.Linear(30, 35),
-            nn.ReLU(),
-            nn.Linear(35, 25),
-            nn.ReLU(),
-            nn.Linear(25, 30),
-            nn.ReLU(),
             nn.Linear(30, 20),
-            nn.ReLU(),
-            nn.Linear(20, 25),
-            nn.ReLU(),
-            nn.Linear(25, 15),
-            nn.ReLU(),
-            nn.Linear(15, 20),
             nn.ReLU(),
             nn.Linear(20, 10),
             nn.ReLU(),
-            nn.Linear(10, 15),
-            nn.ReLU(),
-            nn.Linear(15, 5)
+            nn.Linear(10, 5)
         )
         
 # =============================================================================
@@ -209,7 +183,7 @@ model = NeuralNetwork().to(device)
 print(model)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(),lr=1e-6)
+optimizer = optim.Adam(model.parameters(),lr=1e-5)
 
 a2 = plt.figure(2)
 plt.axis()
@@ -219,7 +193,7 @@ accuracy_history = []
 
 m = nn.Dropout(p=0.2)
 
-for epoch in range(3000):
+for epoch in range(400):
     
     completed_epochs.append(epoch)
     running_loss = 0.0
