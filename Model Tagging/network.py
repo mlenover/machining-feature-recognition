@@ -7,17 +7,20 @@ from crossover import generate_data
 from ID3_classifier import minimize_class_imbalance_id3, id3_estimate
 import pandas as pd
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.model_selection import train_test_split
 
 device = "cuda" if torch.cuda.is_available else "cpu"
 print(f"Using {device} device")
 
-do_id3_tree = False
+do_id3_tree = True
 do_crossover = False
 do_remove_duplicates = True
+do_load_nn = False 
 
 #import the csv
 FOLDER = "data/"
 data = pd.read_csv(FOLDER + "Data File - April 17 Added Non Feature Data.csv")
+pandas_data = data
 header = list(data.head(0))
 num_headers = len(header)
 header_dict = dict(zip(header, range(0,num_headers)))
@@ -42,7 +45,7 @@ if(do_id3_tree):
     sorted_class_dict = sorted(class_dict.values())
     num_classes = len(sorted_class_dict)
     second_greatest_class_samples = sorted_class_dict[num_classes-2]
-    id3_tree = minimize_class_imbalance_id3(data, over_rep_class=None, max_depth=1, max_class_samples=None)
+    id3_tree = minimize_class_imbalance_id3(data, over_rep_class=None, max_depth=2, max_class_samples=None)
 
 np_data = np.array(data[1:]).astype(int)
 #generate some new data using crossover
@@ -205,50 +208,166 @@ class NeuralNetwork(nn.Module):
         logits = self.linear_relu_stack(x)
         return logits
 
-model = NeuralNetwork().to(device)
-print(model)
+criterion = nn.CrossEntropyLoss().cuda()
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(),lr=1e-6)
+if do_load_nn:
+    model = NeuralNetwork()
+    model.load_state_dict(torch.load(FOLDER+"model.zip"))
+    model = model.to(device=device)
+else:
+    model = NeuralNetwork().to(device)
+    print(model)
+    
+    optimizer = optim.Adam(model.parameters(),lr=1e-4)
+    
+    epochs = 2000
+    
+    a2 = plt.figure(2)
+    plt.axis()
+    completed_epochs = []
+    loss_history = []
+    accuracy_history = []
+    
+    m = nn.Dropout(p=0.2)
+    
+    one_hot_labels = []
+    for label in labels:
+        one_hot_labels.append(nn.functional.one_hot(label, 5).double())
+       
+    print(torch.cuda.current_device())
+    print(torch.cuda.device_count())
+    print(torch.cuda.get_device_name(0))
+    
+    for epoch in range(epochs):
+        
+        completed_epochs.append(epoch)
+        running_loss = 0.0
+        correct = 0
+        accuracy = 0.0
+        
+        for i, sample in enumerate(train_data):
+            outputs = model(m(sample))
+           
+            loss = criterion(outputs, one_hot_labels[i])
+            running_loss = running_loss + loss.item()
+            
+            estimatedclass = torch.argmax(outputs, dim=0).item()
+            actualclass = labels[i].item()
+            
+            if estimatedclass == actualclass:
+                correct = correct + 1
+            
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            
+            #if (i+1) % 100 == 0:
+            #    print ('Epoch [%d/%d], Iter [%d]' %(epoch+1, 10, i+1))
+                
+        #accuracy = running_loss, correct*100/(i+1)
+        accuracy = (correct)*100/(i+1)
+        print('Epoch [%d/%d] complete, total loss : %.4f, network accuracy : %.2f %%' %(epoch+1, epochs, running_loss, accuracy))
+        
+        loss_history.append(running_loss)
+        accuracy_history.append(accuracy)
+        
+        plt.clf()
+        plt.plot(completed_epochs, accuracy_history)
+        #plt.ylim(0, 5000)
+        plt.pause(0.05)
+        #print(epoch)
+        
+    plt.show()
+    
+    print('Overall accuracy : %.2f %%' %((correct+num_rows_removed)*100/(i+1+num_rows_removed)))
+    torch.save(model.state_dict(), FOLDER+"model.zip")
 
-a2 = plt.figure(2)
+new_domain_data = pd.read_csv(FOLDER + "Test Data File Fewer Classes.csv")
+new_train, new_test = train_test_split(new_domain_data, test_size=0.3)
+
+all_data = pd.concat([new_train, pandas_data])
+
+if(do_id3_tree):
+    sorted_class_dict = sorted(class_dict.values())
+    num_classes = len(sorted_class_dict)
+    second_greatest_class_samples = sorted_class_dict[num_classes-2]
+    new_id3_tree = minimize_class_imbalance_id3(all_data, over_rep_class=None, max_depth=2, max_class_samples=None)
+    print(new_id3_tree)
+    
+    num_rows_removed = 0
+    tree_decisions_removed = None
+    
+    for i, sample in enumerate(all_data):
+        
+        sample_dict = dict(zip(header_dict.keys(), sample))
+        
+        class_estimate = id3_estimate(new_id3_tree, sample_dict)
+            
+        if class_estimate == -1:
+            #we know the sample is NOT the overrepresented one, so let's add it to a new list
+            if tree_decisions_removed is None:
+                new_tree_decisions_removed = sample
+            else:
+                new_tree_decisions_removed = np.vstack((tree_decisions_removed, sample))
+        else:
+            num_rows_removed = num_rows_removed+1
+    
+    all_data = new_tree_decisions_removed
+
+new_labels = np.array(new_train["Class"]).astype(int)
+new_labels = torch.from_numpy(new_labels)
+new_labels = new_labels.to(device=device, dtype=torch.long)
+
+#train_data = data[:,1:]
+#train_data = np.rot90(train_data)
+
+new_train_data = np.array(new_train).astype(int)
+new_train_data = torch.from_numpy(new_train_data[:,1:])
+new_train_data = new_train_data.to(device=device, dtype=torch.float32)
+
+epochs = 500
+
+a4 = plt.figure(4)
 plt.axis()
 completed_epochs = []
 loss_history = []
 accuracy_history = []
-
 m = nn.Dropout(p=0.2)
+new_one_hot_labels = []
+for label in new_labels:
+    new_one_hot_labels.append(nn.functional.one_hot(label, 5).double())
 
-for epoch in range(3000):
+optimizer = optim.Adam(model.parameters(),lr=1e-5)
+
+for epoch in range(epochs):
     
     completed_epochs.append(epoch)
     running_loss = 0.0
     correct = 0
     accuracy = 0.0
     
-    for i, sample in enumerate(train_data):
+    for i, sample in enumerate(new_train_data):
         outputs = model(m(sample))
-        
-        one_hot_label = nn.functional.one_hot(labels[i], 5).double()
-        
-        loss = criterion(outputs, one_hot_label)
+       
+        loss = criterion(outputs, new_one_hot_labels[i])
         running_loss = running_loss + loss.item()
         
         estimatedclass = torch.argmax(outputs, dim=0).item()
-        actualclass = labels[i].item()
+        actualclass = new_labels[i].item()
         
         if estimatedclass == actualclass:
             correct = correct + 1
         
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         
-        if (i+1) % 100 == 0:
-            print ('Epoch [%d/%d], Iter [%d]' %(epoch+1, 10, i+1))
+        #if (i+1) % 100 == 0:
+        #    print ('Epoch [%d/%d], Iter [%d]' %(epoch+1, 10, i+1))
             
     #accuracy = running_loss, correct*100/(i+1)
     accuracy = (correct)*100/(i+1)
-    print('Epoch complete, total loss : %.4f, network accuracy : %.2f %%' %(running_loss, accuracy))
+    print('Epoch [%d/%d] complete, total loss : %.4f, network accuracy : %.2f %%' %(epoch+1, epochs, running_loss, accuracy))
     
     loss_history.append(running_loss)
     accuracy_history.append(accuracy)
@@ -257,14 +376,6 @@ for epoch in range(3000):
     plt.plot(completed_epochs, accuracy_history)
     #plt.ylim(0, 5000)
     plt.pause(0.05)
-
-plt.show()
-
-print('Overall accuracy : %.2f %%' %((correct+num_rows_removed)*100/(i+1+num_rows_removed)))
-
-test_data = pd.read_csv(FOLDER + "Test Data File Fewer Classes.csv")
-
-nn.Dropout(p=0.3)
 
 correct = 0
 correct_id3 = 0
@@ -279,14 +390,15 @@ y_true = []
 
 featureList = ["None Feature", "Hole", "Pocket/Island/Slot", "Hole Feature", "Fillet/Chamfer"]
 
+model.eval()
 
-for row in test_data.iterrows():
+for row in new_test.iterrows():
 
     sample_dict = row[1].to_dict()
     sample_dict = dict([a, int(x)] for a, x in sample_dict.items())
     
     if do_id3_tree:
-        id3_class_estimate = id3_estimate(id3_tree, sample_dict)
+        id3_class_estimate = id3_estimate(new_id3_tree, sample_dict)
     else:
         id3_class_estimate = -1
     
@@ -296,7 +408,8 @@ for row in test_data.iterrows():
         sample = np.array(row[1][1:]).astype(int)
         sample =  torch.from_numpy(sample)
         sample = sample.to(device=device, dtype=torch.float32)
-        outputs = model(m(sample))
+        with torch.no_grad():
+            outputs = model(m(sample))
         estimatedclass = torch.argmax(outputs, dim=0).item()
     
     ground_truth = np.array(row[1][0]).astype(int)
